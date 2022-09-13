@@ -1,5 +1,6 @@
 # COMP-456_FP
 
 COMP-456 Final Project
-
-## Orianna Wang, Liz Cao, Eric Wang
+ 
+Team: Six
+Team member: Orianna Wang, Liz Cao, Eric Wang
