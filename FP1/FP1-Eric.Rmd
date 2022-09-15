@@ -1,0 +1,119 @@
+---
+title: "COMP-456_FP1"
+author: "Eric Wang"
+date: '2022-09-15'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Research Questions
++ How water scarcity may make an impact on a corporate’s financial performance (e.g. bonds)? 
++ How does climate change impact agriculture and food prices?
++ Will climate change affect global trade (eg. import of necessities)? 
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(rworldmap)
+library(maps)
+library(ggmap) 
+library(ggthemes)
+
+theme_set(theme_minimal())
+```
+
+## 1. Data Set 1: World Food Price
+
+```{r}
+food_price = read_csv("data/wfpvam_foodprices.csv")
+food_price
+```
+
+### a. Data source
+Compiled by the World Food Program and distributed by HDX. [Link](https://www.kaggle.com/datasets/lasaljaywardena/global-food-prices-datasets)
+
+### b. Data description
+Over 740k rows of prices obtained in developing world markets for various goods, from 1990 to 2021. Data includes information on country, market, price of good in local currency, quantity of good, and month recorded.
+
+### c. Data limitations 
+The data's biggest problem is that it only contains food prices for developing countries. That will be a problem if we are going to analyze it on a global scale.
+
+### d. Variable names
+```{r}
+names(food_price)
+```
+
+In the dataset, food price should be the most important variable because it is the core of our research problem. But I did find an interesting variable: `times_mentioned` (derived from `adm0_name`, which are the country names), the number of times countries are mentioned in this data set. This variable shows the intensity of the data in different country conditions. In this plot, countries with dark color mean a high intensity. Vice versa.
+
+### e. Visualization
+```{r}
+world_map <- map_data("world")
+
+food_price %>% 
+  group_by(adm0_name) %>% 
+  summarize(times_mentioned = n()) %>% 
+  ggplot() +
+  geom_map(dat = world_map, 
+           map = world_map, 
+           aes(map_id = region), 
+           fill="white", 
+           color="dark grey",
+           size = 0.1) +
+  geom_map(map = world_map,
+           aes(map_id = adm0_name,
+               fill = times_mentioned),
+           color = "dark grey",
+           size = 0.1) +
+  expand_limits(x = world_map$long, y = world_map$lat) +
+  theme_map()
+```
+
+## 2. Data Set 2: 
+
+```{r}
+disasters = read_csv("data/disasters.csv")
+disasters
+```
+
+### a. Data source
+Compiled by the World Food Program and distributed by HDX. [Link](https://www.kaggle.com/datasets/brsdincer/all-natural-disasters-19002021-eosdis)
+
+### b. Data description
+Natural disasters of all countries from 1900 to 2021.
+
+### c. Data limitations 
+Although this dataset is very detailed, there are a lot of missing values.
+
+### d. Variable names
+```{r}
+names(disasters)
+```
+
+There are many critical variables in this dataset, such as `Start Year`, `End Year`, `Country`,  `Disaster Type`, and so on. I calculated the number of natural disasters in different countries from 1990 to 2021 based on `Year` and `Country` variables
+
+### e. Visualization
+```{r}
+df <- disasters %>%
+  filter(Year >= 1990) %>% 
+  group_by(Country) %>%
+  summarise(total = n()) %>%
+  arrange(desc(total)) %>% 
+  filter(total >= 173) 
+  
+df %>%  
+  mutate(Country = reorder(Country, total)) %>%
+  ggplot(aes(x = Country, 
+             y = total, 
+             fill = Country)) +
+  geom_bar(stat = "identity")+
+  coord_flip()+
+  geom_text(aes(label=total), hjust=0, size=2)+
+  guides(fill="none")+
+  ggtitle("Total number of disasters per country")
+```
+
+### 3. Data Connection
+Country information and time information can link the two datasets together. We can investigate whether natural disasters affect crop yields and, thus, food prices.
