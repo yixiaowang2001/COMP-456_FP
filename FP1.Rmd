@@ -1,0 +1,123 @@
+---
+title: "ESG (FP1)"
+author: "Orianna Wang"
+date: "9/14/2022"
+output: html_document
+---
+
+## Research questions
+
+How water scarcity may make an impact on a corporate’s financial performance (e.g. bonds)? 
+
+How does climate change impact agriculture and food prices?
+
+Will climate change affect global trade (eg. import of necessities)? 
+
+
+
+
+
+
+## Data 1: IFC Investment By Industry - Annual Summary
+
+### Data source:
+Provided by World Bank Group. IFC Industries (Sectors) are in charge of processing IFC transactions. 
+
+### Data description:
+The data shows the amount of money in millions of dollars the international finance cooperation investment on the commercial bases to different industries.
+
+### Data limitation
+Data As Of	06/30/2020, so it is recent. It contains investment in 10 industries, basically covering all of the industries that we need to examine investment and finance change with respect to time. 
+
+### Variable names:
+fiscal year: The fiscal year begins on July 1st of the previous year and runs through June 30th of the designated year.
+Agribusiness and Forestry: investment in the industry of Agribusiness and Forestry in millions of USD.
+Natural Resources:  investment in the industry of Natural Resources in millions of USD.
+
+### Data visualization:
+
+```{r}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(leaflet)
+
+IFC <- read_csv("IFC/IFC_Investment_By_Industry_-_Annual_Summary.csv")
+```
+```{r}
+IFC <- IFC[,1:6]
+IFC
+```
+
+```{r}
+IFC %>% 
+  ggplot() +
+  geom_line(aes(x = `Fiscal Year`,
+                y = `Agribusiness and Forestry`),
+            color = "red") +
+  geom_line(aes(x = `Fiscal Year`,
+                y = `Telecommunications and Information Technologies`),  
+            color = "blue") +
+  geom_line(aes(x = `Fiscal Year`,
+                y = `Manufacturing`),
+            color ="yellow") +
+  geom_line(aes(x = `Fiscal Year`,
+                y = `Infrastructure`)) +
+  geom_line(aes(x = `Fiscal Year`,
+                y = `Natural Resources`),
+            color="grey") +
+  labs(x = "Year",
+       y = "Amount of investment (million USD)")
+```
+
+
+
+## Data 2: Agricultural land
+
+### Data source
+food and Agriculture Organization, electronic files and web site.
+
+### Data description
+Agricultural land refers to the share of land area that is arable, under permanent crops, and under permanent pastures. 
+
+### Data limitations
+the data is updated to 2018, lack recent data, but the data is not too old to lack analysis value. It contains agriculture land as a percentage of land area for each country, which is what I need. 
+
+### Variable names
+Country Name: the name of each country
+1961: the agriculture land as a percentage of land area for each country in 1961. 
+...same for each year
+
+### Data visualization
+
+```{r}
+agriculture <- read_csv("arguculture/Argiculture.csv")
+```
+```{r}
+agr_clean <- agriculture %>% 
+  tail(-4) %>% 
+  select(-c(...3, ...4, ...5)) %>% 
+  pivot_longer(cols =starts_with("..."),
+               names_to = "year",
+               values_to = "Value")
+
+agr_clean %>% 
+  cbind(Year = as.numeric(substring(agr_clean$year, 4))) %>% 
+  mutate(Year = Year + 1955) %>% 
+  select(`Data Source`, Year, Value) %>% 
+  group_by(Year) %>% 
+  summarise(world_mean = mean(Value, na.rm = TRUE)) %>% 
+  ggplot(aes(x = Year,
+             y = world_mean),
+         show.legend = FALSE) +
+  geom_line()
+  
+```
+
+
+Indicate some variable or variables that can connect at least two of the dataset in a join. You do not need to actually do the join, just figure out which variables would be helpful.
+
+
+### Connection:
+we can connect the investment in Agribusiness and Forestry change and the global average agriculture land use change to see the trend of agriculture with respect to time. 
+
