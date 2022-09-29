@@ -1,0 +1,118 @@
+---
+title: "COMP-456_FP2"
+author: "Orianna Wang, Liz Cao, Eric Wang"
+date: '2022-09-28'
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(corrr)
+library(maps)
+library(ggthemes)
+theme_set(theme_minimal())
+
+Disaster1 = read.csv("data/1900_2021_DISASTERS.xlsx - emdat data.csv")
+Foodprice2 = read.csv("data/wfpvam_foodprices (1).csv")
+```
+
+## 1. Data cleaning
+
+Find the food with the highest number of occurrences in the dataset.
+
+```{r}
+Foodprice2 %>% 
+  rename('Country' = 'adm0_name',
+         'Year' = 'mp_year') %>% 
+  group_by(cm_name) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+```{r}
+Disaster = Disaster1 %>% 
+  mutate(Count = 1) %>%
+  group_by(Country, Year) %>% 
+  summarize(Times = sum(Count)) %>% 
+  ungroup()
+
+Foodprice = Foodprice2 %>% 
+  rename('Country' = 'adm0_name',
+         'Year' = 'mp_year') %>% 
+  group_by(Country, Year) %>% 
+  filter(cm_name == "Millet - Retail") %>% 
+  summarize(Price = mean(mp_price)) %>% 
+  ungroup()
+```
+
+```{r}
+data = merge(Foodprice, Disaster, by = c("Year", "Country"))
+```
+
+Find the country with the highest number of occurrences in the dataset.
+
+```{r}
+data %>% 
+  group_by(Country) %>% 
+  count() %>% 
+  arrange(desc(n))
+```
+
+```{r}
+data %>% 
+  filter(Country == "Burkina Faso") %>% 
+  ggplot() +
+  geom_line(aes(x = Year,
+                y = Price / 10,
+                color = "Millet Prices (/10)"),
+            size = 1.5) + 
+  geom_line(aes(x = Year,
+                y = Times,
+                color = "Number of Disasters"),
+            size = 1.5) +
+  labs(x = "Year",
+       y = "Value",
+       title = "Relationship between Millet Prices (/10) and Number of Disasters",
+       caption = "Country: Burkina Faso") +
+  theme(legend.key.size = unit(1.5, 'cm'),
+        legend.position = "top")
+```
+
+## 2. Visualization
+
+```{r}
+CC = data %>% 
+  na.omit() %>% 
+  group_by(Country) %>% 
+  summarize(Cor = cor(Price, Times))
+```
+
+```{r}
+world_map <- map_data("world")
+
+CC %>% 
+  ggplot() +
+  geom_map(dat = world_map, 
+           map = world_map, 
+           aes(map_id = region), 
+           fill = "white", 
+           color = "dark grey",
+           size = 0.5) +
+  geom_map(map = world_map,
+           aes(map_id = Country,
+               fill = Cor)) +
+  expand_limits(x = c(-60, 85), 
+                y = c(-37, 38)) + 
+  theme_map() +
+  theme(legend.background = element_blank()) +
+  labs(title = "Correlation Coefficient between Millet Prices and Number of Disasters")
+```
+
