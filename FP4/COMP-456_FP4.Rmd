@@ -1,0 +1,237 @@
+---
+title: "COMP-456_FP4"
+author: "Orianna Wang, Liz Cao, Eric Wang"
+date: '2022-11-15'
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(countrycode)
+library(forcats)
+library(scales)
+library(viridis)
+
+theme_set(theme_minimal())
+```
+
+## 1. Description & motivation of RQs
+
+### a. Description
+
+We are working on the area of food balance and food prices.  Showing the affordability and cost of healthy food diet world wide helps with the political decision and aid in terms of food Security and Nutrition. Incorporating income, food budget as affordability indicators, and diet quality criteria and food price data as cost indicators, we plan to show the geometric distribution of cost and affordability, comparison to other types of diets,etc.  
+
+### b. Motivation
+
+Price and affordability are key barriers to accessing sufficient, safe, nutritious food to meet dietary needs for an active and healthy life. Research shows that more nutritious foods and diets cost more than basic staples and energy-sufficient diets. Healthy diets are affordable for many people. And we are curious about the geometric distribution of the cost of healthy diets and are there any general relationship between healthy diet’s cost, affordability, regional distribution, and the country’s development level, etc. 
+
+## 2. Dataset description
+
+### a. Food price nutrition dataset
+
+```{r}
+food_price_nutrition = read.csv("data/food_price_nutrition.csv")
+
+food_price_nutrition = food_price_nutrition %>% 
+  head(-5) %>% 
+  select(-1, -2, -6) %>% 
+  rename("Country" = "Country.Name")
+
+food_price_nutrition = food_price_nutrition %>% 
+  mutate(Region = countrycode(sourcevar = food_price_nutrition$Country.Code, origin = "iso3c", destination = "un.regionsub.name"))
+
+head(food_price_nutrition)
+```
+
+The dataset is provided [here](https://databank.worldbank.org/source/food-prices-for-nutrition), and we chose `Food Prices for Nutrition` for the database, all countries, all classifications, all series, and all time.
+
++ `Country`: country name
++ `Country.Code`: country code
++ `Time`: the year of the observation
++ `Cost.of.an.energy.sufficient.diet..CoCA.` to `Millions.of.people.who.cannot.afford.a.healthy.diet..CoHD_unafford_n.`: Same to the column name
++ `Region`: The region name based on the country name, according to `un.regionsub.name`.
+
+For example, we can plot a bar chart of the costs of an energy sufficient diet in Northern American countries in 2017 based on `Country`, `Time`, `Cost.of.an.energy.sufficient.diet..CoCA.`, and `Region`.
+
+```{r}
+food_price_nutrition %>% 
+  filter(Region == "Northern America",
+         Time == 2017) %>% 
+  ggplot(aes(x = fct_reorder(Country, Cost.of.an.energy.sufficient.diet..CoCA.),
+             y = Cost.of.an.energy.sufficient.diet..CoCA.,
+             fill = Country)) +
+  geom_col() +
+  labs(title = "Costs of An Energy Sufficient Diet in Northern American Countries in 2017",
+       x = "",
+       y = "Cost") +
+  theme(legend.position = "None")
+```
+
+We can see from the plot above that Canada has the lowest cost of an energy sufficient diet among Northern American countries in 2017, while Bermuda has the highest.
+
+### b. GDP dataset
+
+```{r}
+GDP = read.csv("data/GDP.csv")
+
+GDP = GDP %>% 
+  select(Country.Name, Country.Code, X2017, X2018, X2019, X2020, X2021)
+
+head(GDP)
+```
+
+The dataset is provided [here](https://data.worldbank.org/indicator/NY.GDP.MKTP.CD).
+
++ `Country.Name`: country name
++ `Country.Code`: country code
++ `X2017` to `X2021`: GDP of that year in US dollars
+
+For example, we can plot a line chart of the GDP of China, United States, and Japan from 2017 to 2021.
+
+```{r}
+GDP %>% 
+  filter(Country.Name == "Japan" | Country.Name == "China" | Country.Name == "United States") %>% 
+  pivot_longer(cols = starts_with("X"),
+               names_to = "Year",
+               values_to = "GDP") %>% 
+  mutate(Year = as.numeric(substr(Year, 2, 5))) %>% 
+  ggplot(aes(x = Year,
+             y = GDP,
+             color = Country.Name)) +
+  geom_line(size = 1) + 
+  scale_y_continuous(labels = comma) +
+  labs(colour = "Country",
+       title = "GDP of China, United States, and Japan from 2017 to 2021",
+       x = "",
+       y = "")
+```
+
+We can see from the line chart above that United States has the highest GDP, China is the second, and Japan is the third. Also, both China and United States has an increase in GDP over the years.
+
+## 3. Analyses with short description of results
+
+```{r}
+v1_gdp = GDP %>% 
+  mutate(Region = countrycode(sourcevar = GDP$Country.Code, origin = "iso3c", destination = "un.regionsub.name")) %>% 
+  filter(!is.na(Region)) %>% 
+  pivot_longer(cols = starts_with("X"),
+               names_to = "Year",
+               values_to = "GDP") %>% 
+  mutate(Year = as.numeric(substr(Year, 2, 5))) %>% 
+  filter(Year == 2017) %>% 
+  na.omit() %>% 
+  group_by(Region) %>% 
+  summarize(GDP = mean(GDP))
+
+v1_all = food_price_nutrition %>% 
+  filter(Time == 2017) %>% 
+  filter(Cost.of.a.healthy.diet..CoHD. != "..") %>% 
+  group_by(Region) %>% 
+  na.omit() %>% 
+  summarize(avg_cost = mean(as.numeric(Cost.of.a.healthy.diet..CoHD.))) %>% 
+  ungroup() %>% 
+  left_join(v1_gdp,
+            by = "Region")
+
+v1_all %>% 
+  ggplot() +
+  geom_bar(aes(x = fct_reorder(Region, avg_cost),
+               y = avg_cost,
+               fill = Region),
+           stat = "identity") +
+  scale_fill_viridis(discrete = TRUE, option = "F") +
+  geom_line(aes(x = fct_reorder(Region, avg_cost),
+                y = GDP / 1000000000000,
+                group = 1),
+            size = 1.2,
+            color = "gray") +
+  geom_point(aes(x = fct_reorder(Region, avg_cost),
+                y = GDP / 1000000000000,
+                group = 1),
+             size = 2,
+             color = "gray") +
+  labs(x = "",
+       title = "Average Cost of A Healthy Diet and GDP in Different Regions in 2017") +
+  theme(axis.text.x = element_text(angle = 65, vjust = 1, hjust = 1),
+        legend.position = "None") +
+  scale_y_continuous(name = "Average Cost",
+                     sec.axis = sec_axis(~.*1000000000000, name = "GDP($)"))
+```
+
+As shown in the plot above, the columns represent the average cost of a healthy diet in different regions, and the gray line and points mean the average GDP of those regions. We can see from the plot that Australia and New Zealand have the lowest average cost, while Eastern Asia has the highest average cost. Since the columns are only about the costs, not the affordability, we also need to consider GDP to interpret the result. People in regions with low costs and high GDP are much easier to achieve a healthy diet than people in regions which have high costs but low GDP. 
+
+## 4. Project plan
+
+1. **Before thanksgiving:** Incorporate more indicator to the cost of healthy diet visualization, refining the visualization. (Eric)
+2. **After thanksgiving:** Find the affordability indicator, and form a story based on affordability and cost of healthy diet of the countries. (Orianna, Liz) 
+    1. Idea1: Compare the cost of the diets to certain percent (estimated proportion of expenditures on food) of the international poverty line of USD 1.90 a day. 
+    2. Idea 2: Compare the cost of the diets to typical daily food expenditures in each country.
+3. **December 1:** Make the visualization of the affordability of healthy diet, possibly with different indicators. (Eric, Orianna, Liz)
+4. **End of class:** Refining all the data and visualization, making case study and researching about the story and take out from this research project. (Orianna, Liz, Eric)
+
+The tricky part was about choosing of the cost and affordability indicators. Research are needed about what can be used to measure the affordability and also what data can represent the least cost of food : can the lowest income and the least nutritional cost of female lead to that? 
+
+
+## 5. Summary of contributions
++ Orianna: Research and read paper to figure out how to choose cost and affordability indicator, what indicator needed to be incorporated and translate into the manageable mathematical indicators for modeling.
++ Liz: Reading relevant literature reviews and articles, such as food policies from United States Department of Agriculture, finding the appropriate dataset for our research question, and matching multiple data sources together. 
++ Eric: Data cleaning, data processing, and visualization. 
+Together: refine the data and the story, improve the visualization.
+
+```{r}
+v2_gdp = GDP %>% 
+  mutate(Region = countrycode(sourcevar = GDP$Country.Code, origin = "iso3c", destination = "un.regionsub.name")) %>% 
+  filter(!is.na(Region)) %>% 
+  pivot_longer(cols = starts_with("X"),
+               names_to = "Year",
+               values_to = "GDP") %>% 
+  mutate(Year = as.numeric(substr(Year, 2, 5))) %>% 
+  filter(Year == 2017) %>% 
+  na.omit() %>% 
+  group_by(Region) %>% 
+  summarize(GDP = mean(GDP))
+
+v2_all = food_price_nutrition %>% 
+  filter(Time == 2017) %>% 
+  filter(Cost.of.an.energy.sufficient.diet..CoCA. != "..") %>% 
+  group_by(Region) %>% 
+  na.omit() %>% 
+  summarize(avg_cost = mean(as.numeric(Cost.of.an.energy.sufficient.diet..CoCA.))) %>% 
+  ungroup() %>% 
+  left_join(v2_gdp,
+            by = "Region")
+
+v2_all %>% 
+  ggplot() +
+  geom_bar(aes(x = fct_reorder(Region, avg_cost),
+               y = avg_cost,
+               fill = Region),
+           stat = "identity") +
+  scale_fill_viridis(discrete = TRUE, option = "D") +
+  geom_line(aes(x = fct_reorder(Region, avg_cost),
+                y = GDP / 5000000000000,
+                group = 1),
+            size = 1.2,
+            color = "gray") +
+  geom_point(aes(x = fct_reorder(Region, avg_cost),
+                y = GDP / 5000000000000,
+                group = 1),
+             size = 2,
+             color = "gray") +
+  labs(x = "",
+       title = "Average Cost of An Energy Sufficient Diet and GDP in Different Regions in 2017") +
+  theme(axis.text.x = element_text(angle = 65, vjust = 1, hjust = 1),
+        legend.position = "None") +
+  scale_y_continuous(name = "Average Cost",
+                     sec.axis = sec_axis(~.*5000000000000, name = "GDP($)"))
+```
+
+
