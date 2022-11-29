@@ -1,0 +1,418 @@
+---
+title: "COMP-456_FP5"
+author: "Eric Wang"
+date: '2022-11-22'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(countrycode)
+library(forcats)
+library(scales)
+library(viridis)
+library(factoextra)
+library(ClusterR)
+library(cluster)
+
+theme_set(theme_minimal())
+
+set.seed(32)
+```
+
+## 1. Data
+
+```{r}
+food_price_nutrition = read.csv("data/food_price_nutrition.csv")
+
+food_price_nutrition = food_price_nutrition %>% 
+  head(-5) %>% 
+  select(-1, -2, -6) %>% 
+  rename("Country" = "Country.Name")
+
+food_price_nutrition = food_price_nutrition %>% 
+  mutate(Region = countrycode(sourcevar = food_price_nutrition$Country.Code, origin = "iso3c", destination = "un.regionsub.name"))
+
+head(food_price_nutrition)
+```
+
+```{r}
+GDP = read.csv("data/GDP.csv")
+
+GDP = GDP %>% 
+  select(Country.Name, Country.Code, X2017, X2018, X2019, X2020, X2021)
+
+head(GDP)
+```
+
+```{r}
+income = read.csv("data/income.csv")
+
+income = income %>% 
+  select(Country.Name, Country.Code, X2017, X2018, X2019, X2020, X2021)
+
+head(income)
+
+income %>% 
+  filter(Country.Name == "China")
+```
+
+## 2. Visualization
+
+### a. CoHD + GDP
+
+```{r}
+v1_gdp = GDP %>% 
+  mutate(Region = countrycode(sourcevar = GDP$Country.Code, origin = "iso3c", destination = "un.regionsub.name")) %>% 
+  filter(!is.na(Region)) %>% 
+  pivot_longer(cols = starts_with("X"),
+               names_to = "Year",
+               values_to = "GDP") %>% 
+  mutate(Year = as.numeric(substr(Year, 2, 5))) %>% 
+  filter(Year == 2017) %>% 
+  na.omit() %>% 
+  group_by(Region) %>% 
+  summarize(GDP = mean(GDP))
+
+v1_all = food_price_nutrition %>% 
+  filter(Time == 2017) %>% 
+  filter(Cost.of.a.healthy.diet..CoHD. != "..") %>% 
+  group_by(Region) %>% 
+  na.omit() %>% 
+  summarize(avg_cost = mean(as.numeric(Cost.of.a.healthy.diet..CoHD.))) %>% 
+  ungroup() %>% 
+  left_join(v1_gdp,
+            by = "Region")
+
+v1_all %>% 
+  ggplot() +
+  geom_bar(aes(x = fct_reorder(Region, avg_cost),
+               y = avg_cost,
+               fill = Region),
+           stat = "identity") +
+  scale_fill_viridis(discrete = TRUE, option = "F") +
+  geom_line(aes(x = fct_reorder(Region, avg_cost),
+                y = GDP / 1000000000000,
+                group = 1),
+            size = 1.2,
+            color = "gray") +
+  geom_point(aes(x = fct_reorder(Region, avg_cost),
+                y = GDP / 1000000000000,
+                group = 1),
+             size = 2,
+             color = "gray") +
+  labs(x = "",
+       title = "Average Cost of A Healthy Diet and GDP in Different Regions in 2017") +
+  theme(axis.text.x = element_text(angle = 65, vjust = 1, hjust = 1),
+        legend.position = "None") +
+  scale_y_continuous(name = "Average Cost",
+                     sec.axis = sec_axis(~.*1000000000000, name = "GDP($)"))
+```
+
+### b. CoCA + GDP
+
+```{r}
+v2_gdp = GDP %>% 
+  mutate(Region = countrycode(sourcevar = GDP$Country.Code, origin = "iso3c", destination = "un.regionsub.name")) %>% 
+  filter(!is.na(Region)) %>% 
+  pivot_longer(cols = starts_with("X"),
+               names_to = "Year",
+               values_to = "GDP") %>% 
+  mutate(Year = as.numeric(substr(Year, 2, 5))) %>% 
+  filter(Year == 2017) %>% 
+  na.omit() %>% 
+  group_by(Region) %>% 
+  summarize(GDP = mean(GDP))
+
+v2_all = food_price_nutrition %>% 
+  filter(Time == 2017) %>% 
+  filter(Cost.of.an.energy.sufficient.diet..CoCA. != "..") %>% 
+  group_by(Region) %>% 
+  na.omit() %>% 
+  summarize(avg_cost = mean(as.numeric(Cost.of.an.energy.sufficient.diet..CoCA.))) %>% 
+  ungroup() %>% 
+  left_join(v2_gdp,
+            by = "Region")
+
+v2_all %>% 
+  ggplot() +
+  geom_bar(aes(x = fct_reorder(Region, avg_cost),
+               y = avg_cost,
+               fill = Region),
+           stat = "identity") +
+  scale_fill_viridis(discrete = TRUE, option = "D") +
+  geom_line(aes(x = fct_reorder(Region, avg_cost),
+                y = GDP / 5000000000000,
+                group = 1),
+            size = 1.2,
+            color = "gray") +
+  geom_point(aes(x = fct_reorder(Region, avg_cost),
+                y = GDP / 5000000000000,
+                group = 1),
+             size = 2,
+             color = "gray") +
+  labs(x = "",
+       title = "Average Cost of An Energy Sufficient Diet and GDP in Different Regions in 2017") +
+  theme(axis.text.x = element_text(angle = 65, vjust = 1, hjust = 1),
+        legend.position = "None") +
+  scale_y_continuous(name = "Average Cost",
+                     sec.axis = sec_axis(~.*5000000000000, name = "GDP($)"))
+```
+
+### c. CoHD + GDP 
+
+```{r}
+v3_gdp = GDP %>% 
+  mutate(Region = countrycode(sourcevar = GDP$Country.Code, origin = "iso3c", destination = "un.regionsub.name")) %>% 
+  filter(!is.na(Region)) %>% 
+  pivot_longer(cols = starts_with("X"),
+               names_to = "Year",
+               values_to = "GDP") %>% 
+  mutate(Year = as.numeric(substr(Year, 2, 5))) %>% 
+  filter(Year == 2017) %>% 
+  rename("Country" = "Country.Name")
+
+v3_all = food_price_nutrition %>% 
+  filter(Time == 2017) %>% 
+  filter(Cost.of.a.healthy.diet..CoHD. != "..") %>% 
+  filter(!is.na(Region)) %>% 
+  left_join(v3_gdp,
+            by = "Country")
+
+v3_all %>% 
+  na.omit() %>% 
+  ggplot(aes(x = log(GDP),
+             y = as.numeric(Cost.of.a.healthy.diet..CoHD.),
+             color = Region.y)) +
+  geom_point()
+```
+
+```{r}
+v3_cluster = v3_all %>% 
+  select(Country, Cost.of.a.healthy.diet..CoHD., GDP) %>% 
+  na.omit() %>% 
+  filter(Cost.of.a.healthy.diet..CoHD. != "..") %>% 
+  mutate(Cost.of.a.healthy.diet..CoHD. = as.numeric(Cost.of.a.healthy.diet..CoHD.)) %>% 
+  mutate(GDP = log(GDP))
+Group = kmeans(scale(v3_cluster %>% select(Cost.of.a.healthy.diet..CoHD., GDP)), 4, 25)$cluster
+
+v3_all_2 = v3_all %>% 
+  na.omit() %>% 
+  filter(Cost.of.a.healthy.diet..CoHD. != "..") %>% 
+  cbind(Group) %>% 
+  select(Country, Cost.of.a.healthy.diet..CoHD., Group, GDP, Region.y)
+
+v3_all_2 %>% 
+  na.omit() %>% 
+  ggplot(aes(x = log(GDP),
+             y = as.numeric(Cost.of.a.healthy.diet..CoHD.),
+             color = as.factor(Group))) +
+  geom_point()
+```
+
+### d. CoHD + income
+
+```{r}
+v4_income = income %>% 
+  mutate(Region = countrycode(sourcevar = income$Country.Code, origin = "iso3c", destination = "un.regionsub.name")) %>% 
+  na.omit() %>% 
+  filter(!is.na(Region)) %>% 
+  pivot_longer(cols = starts_with("X"),
+               names_to = "Year",
+               values_to = "Income") %>% 
+  mutate(Year = as.numeric(substr(Year, 2, 5))) %>% 
+  filter(Year == 2017) %>% 
+  na.omit() %>% 
+  group_by(Region) %>% 
+  summarize(Income = mean(Income))
+
+v4_all = food_price_nutrition %>% 
+  filter(Time == 2017) %>% 
+  filter(Cost.of.a.healthy.diet..CoHD. != "..") %>% 
+  group_by(Region) %>% 
+  na.omit() %>% 
+  summarize(avg_cost = mean(as.numeric(Cost.of.a.healthy.diet..CoHD.))) %>% 
+  ungroup() %>% 
+  left_join(v4_income,
+            by = "Region")
+
+v4_all %>% 
+  ggplot() +
+  geom_bar(aes(x = fct_reorder(Region, avg_cost),
+               y = avg_cost,
+               fill = Region),
+           stat = "identity") +
+  scale_fill_viridis(discrete = TRUE, option = "F") +
+  geom_line(aes(x = fct_reorder(Region, avg_cost),
+                y = Income / 10000,
+                group = 1),
+            size = 1.2,
+            color = "gray") +
+  geom_point(aes(x = fct_reorder(Region, avg_cost),
+                y = Income / 10000,
+                group = 1),
+             size = 2,
+             color = "gray") +
+  labs(x = "",
+       title = "Average Cost of A Healthy Diet and Income in Different Regions in 2017") +
+  theme(axis.text.x = element_text(angle = 65, vjust = 1, hjust = 1),
+        legend.position = "None") +
+  scale_y_continuous(name = "Average Cost",
+                     sec.axis = sec_axis(~.*10000, name = "income($)"))
+```
+
+### e. CoCA + income
+
+```{r}
+v5_income = income %>% 
+  mutate(Region = countrycode(sourcevar = income$Country.Code, origin = "iso3c", destination = "un.regionsub.name")) %>% 
+  na.omit() %>% 
+  filter(!is.na(Region)) %>% 
+  pivot_longer(cols = starts_with("X"),
+               names_to = "Year",
+               values_to = "Income") %>% 
+  mutate(Year = as.numeric(substr(Year, 2, 5))) %>% 
+  filter(Year == 2017) %>% 
+  na.omit() %>% 
+  group_by(Region) %>% 
+  summarize(Income = mean(Income))
+
+v5_all = food_price_nutrition %>% 
+  filter(Time == 2017) %>% 
+  filter(Cost.of.an.energy.sufficient.diet..CoCA. != "..") %>% 
+  group_by(Region) %>% 
+  na.omit() %>% 
+  summarize(avg_cost = mean(as.numeric(Cost.of.an.energy.sufficient.diet..CoCA.))) %>% 
+  ungroup() %>% 
+  left_join(v5_income,
+            by = "Region")
+
+v5_all %>% 
+  ggplot() +
+  geom_bar(aes(x = fct_reorder(Region, avg_cost),
+               y = avg_cost,
+               fill = Region),
+           stat = "identity") +
+  scale_fill_viridis(discrete = TRUE, option = "D") +
+  geom_line(aes(x = fct_reorder(Region, avg_cost),
+                y = Income / 50000,
+                group = 1),
+            size = 1.2,
+            color = "gray") +
+  geom_point(aes(x = fct_reorder(Region, avg_cost),
+                y = Income / 50000,
+                group = 1),
+             size = 2,
+             color = "gray") +
+  labs(x = "",
+       title = "Average Cost of An Energy Sufficient Diet and Income in Different Regions in 2017") +
+  theme(axis.text.x = element_text(angle = 65, vjust = 1, hjust = 1),
+        legend.position = "None") +
+  scale_y_continuous(name = "Average Cost",
+                     sec.axis = sec_axis(~.*50000, name = "income($)"))
+```
+
+### f. CoHD + Income 
+
+```{r}
+v6_income = income %>% 
+  mutate(Region = countrycode(sourcevar = GDP$Country.Code, origin = "iso3c", destination = "un.regionsub.name")) %>% 
+  filter(!is.na(Region)) %>% 
+  pivot_longer(cols = starts_with("X"),
+               names_to = "Year",
+               values_to = "Income") %>% 
+  mutate(Year = as.numeric(substr(Year, 2, 5))) %>% 
+  filter(Year == 2017) %>% 
+  rename("Country" = "Country.Name")
+
+v6_all = food_price_nutrition %>% 
+  filter(Time == 2017) %>% 
+  filter(Cost.of.a.healthy.diet..CoHD. != "..") %>% 
+  filter(!is.na(Region)) %>% 
+  left_join(v6_income,
+            by = "Country")
+
+v6_all %>% 
+  na.omit() %>% 
+  ggplot(aes(x = log(Income),
+             y = as.numeric(Cost.of.a.healthy.diet..CoHD.),
+             color = Region.y)) +
+  geom_point()
+```
+
+```{r}
+v6_cluster = v6_all %>% 
+  select(Country, Cost.of.a.healthy.diet..CoHD., Income) %>% 
+  na.omit() %>% 
+  filter(Cost.of.a.healthy.diet..CoHD. != "..") %>% 
+  mutate(Cost.of.a.healthy.diet..CoHD. = as.numeric(Cost.of.a.healthy.diet..CoHD.)) %>% 
+  mutate(GDP = log(Income))
+Group = kmeans(scale(v6_cluster %>% select(Cost.of.a.healthy.diet..CoHD., Income)), 4, 25)$cluster
+
+v6_all_2 = v6_all %>% 
+  na.omit() %>% 
+  filter(Cost.of.a.healthy.diet..CoHD. != "..") %>% 
+  cbind(Group) %>% 
+  select(Country, Cost.of.a.healthy.diet..CoHD., Group, Income, Region.y)
+
+v6_all_2 %>% 
+  na.omit() %>% 
+  ggplot(aes(x = log(Income),
+             y = as.numeric(Cost.of.a.healthy.diet..CoHD.),
+             color = as.factor(Group))) +
+  geom_point()
+```
+
+### g. CoHD_fexp + Income
+
+```{r}
+v7_income = income %>% 
+  mutate(Region = countrycode(sourcevar = GDP$Country.Code, origin = "iso3c", destination = "un.regionsub.name")) %>% 
+  filter(!is.na(Region)) %>% 
+  pivot_longer(cols = starts_with("X"),
+               names_to = "Year",
+               values_to = "Income") %>% 
+  mutate(Year = as.numeric(substr(Year, 2, 5))) %>% 
+  filter(Year == 2017) %>% 
+  rename("Country" = "Country.Name")
+
+v7_all = food_price_nutrition %>% 
+  filter(Time == 2017) %>% 
+  filter(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp. != "..") %>% 
+  filter(!is.na(Region)) %>% 
+  left_join(v7_income,
+            by = "Country")
+
+v7_all %>% 
+  na.omit() %>% 
+  ggplot(aes(x = log(Income),
+             y = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.),
+             color = Region.y)) +
+  geom_point() +
+  geom_smooth()
+```
+
+```{r}
+food_price_nutrition %>% 
+  filter(Time == 2017) %>% 
+  filter(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp. != "..") %>% 
+  select(Country, Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.) %>% 
+  ggplot(aes(x = Country,
+             y = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.))) +
+  geom_point() +
+  geom_hline(yintercept = 1, col = 2)
+```
+
+```{r}
+food_price_nutrition %>% 
+  filter(Time == 2017) %>% 
+  filter(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp. != "..") %>% 
+  ggplot(aes(x = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.))) +
+  geom_histogram()
+```
+
