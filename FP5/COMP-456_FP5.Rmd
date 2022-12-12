@@ -2,11 +2,15 @@
 title: "COMP-456_FP5"
 author: "Eric Wang"
 date: '2022-11-22'
-output: html_document
+output:
+  html_document:
+    toc: TRUE
+    df_print: paged
+    toc_float: TRUE
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
 ```{r}
@@ -352,6 +356,16 @@ v6_cluster = v6_all %>%
   filter(Cost.of.a.healthy.diet..CoHD. != "..") %>% 
   mutate(Cost.of.a.healthy.diet..CoHD. = as.numeric(Cost.of.a.healthy.diet..CoHD.)) %>% 
   mutate(GDP = log(Income))
+
+# elbow
+tot_withinss = c()
+for (x in 1:10) {
+  tot_withinss[x] = kmeans(scale(v6_cluster %>% select(Cost.of.a.healthy.diet..CoHD., Income)), x, 25)$tot.withinss
+}
+plot(seq(1, 10), tot_withinss, type = "l")
+```
+
+```{r}
 Group = kmeans(scale(v6_cluster %>% select(Cost.of.a.healthy.diet..CoHD., Income)), 4, 25)$cluster
 
 v6_all_2 = v6_all %>% 
@@ -366,6 +380,11 @@ v6_all_2 %>%
              y = as.numeric(Cost.of.a.healthy.diet..CoHD.),
              color = as.factor(Group))) +
   geom_point()
+```
+
+```{r}
+m = kmeans(scale(v6_cluster %>% select(Cost.of.a.healthy.diet..CoHD., Income)), 4, 25)
+m$centers
 ```
 
 ### g. CoHD_fexp + Income
@@ -390,29 +409,77 @@ v7_all = food_price_nutrition %>%
 
 v7_all %>% 
   na.omit() %>% 
+  ggplot() +
+  geom_point(aes(x = Income,
+                 y = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.),
+                 color = Region.y)) +
+  geom_smooth(aes(x = Income,
+                  y = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.)),
+              stat = "smooth", 
+              se = FALSE,
+              color = 1)
+```
+
+```{r}
+v7_income = income %>% 
+  mutate(Region = countrycode(sourcevar = GDP$Country.Code, origin = "iso3c", destination = "un.regionsub.name")) %>% 
+  filter(!is.na(Region)) %>% 
+  pivot_longer(cols = starts_with("X"),
+               names_to = "Year",
+               values_to = "Income") %>% 
+  mutate(Year = as.numeric(substr(Year, 2, 5))) %>% 
+  filter(Year == 2017) %>% 
+  rename("Country" = "Country.Name")
+
+v7_all = food_price_nutrition %>% 
+  filter(Time == 2017) %>% 
+  filter(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp. != "..") %>% 
+  filter(!is.na(Region)) %>% 
+  left_join(v7_income,
+            by = "Country")
+
+v7_all %>% 
+  na.omit() %>% 
+  ggplot() +
+  geom_point(aes(x = log(Income),
+                 y = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.),
+                 color = Region.y)) +
+  geom_smooth(aes(x = log(Income),
+                  y = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.)),
+              stat = "smooth", 
+              se = FALSE,
+              color = 1)
+```
+
+```{r}
+v7_cluster = v7_all %>% 
+  select(Country, Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp., Income) %>% 
+  na.omit() %>% 
+  filter(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp. != "..") %>% 
+  mutate(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp. = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.)) %>% 
+  mutate(GDP = log(Income))
+
+# elbow
+tot_withinss = c()
+for (x in 1:10) {
+  tot_withinss[x] = kmeans(scale(v7_cluster %>% select(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp., Income)), x, 25)$tot.withinss
+}
+plot(seq(1, 10), tot_withinss, type = "l")
+```
+
+```{r}
+Group = kmeans(scale(v7_cluster %>% select(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp., Income)), 4, 25)$cluster
+
+v7_all_2 = v7_all %>% 
+  na.omit() %>% 
+  filter(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp. != "..") %>% 
+  cbind(Group) %>% 
+  select(Country, Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp., Group, Income, Region.y)
+
+v7_all_2 %>% 
+  na.omit() %>% 
   ggplot(aes(x = log(Income),
              y = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.),
-             color = Region.y)) +
-  geom_point() +
-  geom_smooth()
+             color = as.factor(Group))) +
+  geom_point()
 ```
-
-```{r}
-food_price_nutrition %>% 
-  filter(Time == 2017) %>% 
-  filter(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp. != "..") %>% 
-  select(Country, Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.) %>% 
-  ggplot(aes(x = Country,
-             y = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.))) +
-  geom_point() +
-  geom_hline(yintercept = 1, col = 2)
-```
-
-```{r}
-food_price_nutrition %>% 
-  filter(Time == 2017) %>% 
-  filter(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp. != "..") %>% 
-  ggplot(aes(x = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.))) +
-  geom_histogram()
-```
-

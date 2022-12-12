@@ -1,0 +1,212 @@
+---
+title: "COMP-456_Final"
+author: "Orianna Wang, Liz Cao, Eric Wang"
+date: '2022-12-04'
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    df_print: paged
+    code_download: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(countrycode)
+library(forcats)
+library(scales)
+library(viridis)
+library(factoextra)
+library(leaflet)
+library(ggthemes)  
+
+theme_set(theme_bw())
+```
+
+## 1. Motivation
+
+## 2. Research Quesiton
+
+## 3. Data Source
+
+```{r}
+food_price_nutrition = read.csv("data/food_price_nutrition.csv")
+
+food_price_nutrition = food_price_nutrition %>% 
+  head(-5) %>% 
+  select(-1, -2, -6) %>% 
+  rename("Country" = "Country.Name") %>% 
+  filter(Time == 2017)
+
+food_price_nutrition = food_price_nutrition %>% 
+  mutate(Region = countrycode(sourcevar = food_price_nutrition$Country.Code, origin = "iso3c", destination = "un.region.name"))
+
+head(food_price_nutrition)
+```
+
+```{r}
+income = read.csv("data/income.csv")
+
+income = income %>% 
+  select(Country.Name, Country.Code, X2017) %>% 
+  mutate("Group" = ifelse(X2017 <= 1085, "Low-income",
+                          ifelse(X2017 <= 4255, "Lower-middle-income",
+                                 ifelse(X2017 <= 13205, "Upper-middle-income", "High-income")))) %>% 
+  rename("Income" = X2017)
+
+head(income)
+```
+
+## 4. Results
+
+### a. Global Analysis
+
+#### i. Boxplot: The Cost of Different Types of Diets by Country Income Group
+
+```{r}
+food_price_nutrition %>% 
+  left_join(income, by = "Country.Code") %>% 
+  filter(!is.na(Group)) %>% 
+  select(Country, 
+         Cost.of.an.energy.sufficient.diet..CoCA.,
+         Cost.of.a.nutrient.adequate.diet..CoNA.,
+         Cost.of.a.healthy.diet..CoHD.,
+         Group,
+         Region) %>% 
+  rename(`Cost of an energy sufficient diet` = "Cost.of.an.energy.sufficient.diet..CoCA.",
+         `Cost of a nutrient adequate diet` = "Cost.of.a.nutrient.adequate.diet..CoNA.",
+         `Cost of a healthy diet` = "Cost.of.a.healthy.diet..CoHD.") %>% 
+  pivot_longer(cols = c(`Cost of an energy sufficient diet`,
+                        `Cost of a nutrient adequate diet`,
+                        `Cost of a healthy diet`),
+               names_to = c("Category"),
+               values_to = "Value") %>% 
+  na.omit() %>% 
+  filter(Value != "..") %>% 
+  ggplot(aes(fill = Category)) +
+  geom_boxplot(aes(x = Category,
+                   y = as.numeric(Value)),
+               width = 0.4) +
+  geom_boxplot(aes(x = Category,
+                   y = as.numeric(Value)),
+               width = 0.4) +
+  geom_boxplot(aes(x = Category,
+                   y = as.numeric(Value)),
+               width = 0.4) +
+  facet_wrap(~Group, ncol = 4) +
+  theme(legend.position = "bottom",
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank()) +
+  scale_fill_viridis(discrete = TRUE, direction = -1, option = "F") +
+  labs(title = "The Cost of Different Types of Diets by Country Income Group",
+       y = "2017 USD")
+```
+
+
+#### ii. Map: Percentage of The Population Who Cannot Afford a Healthy Diet
+
+
+```{r}
+world_map = map_data("world")
+
+food_price_nutrition %>% 
+  filter(Percent.of.the.population.who.cannot.afford.a.healthy.diet..CoHD_headcount. != "..") %>% 
+  mutate(Percentage = as.numeric(Percent.of.the.population.who.cannot.afford.a.healthy.diet..CoHD_headcount.)) %>% 
+  ggplot() +
+  geom_map(data = world_map,
+           map = world_map,
+           aes(map_id = region),
+           fill = "#BDBDBD",
+           color = "white",
+           size = 0.2) +
+  geom_map(map = world_map,
+           aes(map_id = Country,
+               fill = Percentage)) +
+  expand_limits(x = world_map$long, y = world_map$lat) + 
+  theme(legend.position = "right",
+        legend.key.size = unit(0.5, 'cm'),
+        legend.key.height = unit(0.5, 'cm'), 
+        legend.key.width = unit(0.5, 'cm'),
+        legend.title = element_text(size=10),
+        legend.text = element_text(size=8)) +
+  labs(title = "Percentage of The Population Who Cannot Afford a Healthy Diet",
+       x = "Longitude",
+       y = "Latitude") +
+  scale_fill_viridis(direction = -1, option = "F")
+```
+
+#### iii. Scatter Plot: Affordability of A Healthy Diet vs. Income
+
+```{r}
+income_temp = income %>% 
+  mutate(Region = countrycode(sourcevar = income$Country.Code, origin = "iso3c", destination = "un.regionsub.name")) %>% 
+  filter(!is.na(Region)) %>% 
+  rename("Country" = "Country.Name")
+
+food_price_nutrition %>% 
+  filter(Time == 2017) %>% 
+  filter(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp. != "..") %>% 
+  filter(!is.na(Region)) %>% 
+  left_join(income_temp,
+            by = "Country") %>% 
+  rename(Region = "Region.y") %>% 
+  na.omit() %>% 
+  ggplot() +
+  geom_smooth(aes(x = Income,
+                  y = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.)),
+              stat = "smooth", 
+              se = FALSE,
+              color = 8,
+              size = 2.5) +
+  geom_point(aes(x = Income,
+                 y = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.),
+                 color = Region)) +
+  scale_color_viridis(discrete = TRUE, direction = -1, option = "F") +
+  labs(title = "Affordability of A Healthy Diet vs. Income",
+       x = "Income",
+       y = "Affordability") + 
+  theme(legend.position = "right",
+        legend.key.size = unit(0.5, 'cm'),
+        legend.key.height = unit(0.5, 'cm'), 
+        legend.key.width = unit(0.5, 'cm'),
+        legend.title = element_text(size=10),
+        legend.text = element_text(size=8)) 
+```
+
+```{r}
+food_price_nutrition %>% 
+  filter(Time == 2017) %>% 
+  filter(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp. != "..") %>% 
+  filter(!is.na(Region)) %>% 
+  left_join(income_temp,
+            by = "Country") %>% 
+  rename(Region = "Region.y") %>% 
+  na.omit() %>% 
+  ggplot() +
+  geom_smooth(aes(x = log(Income),
+                  y = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.)),
+              stat = "smooth", 
+              se = FALSE,
+              color = 8,
+              size = 2.5) +
+  geom_point(aes(x = log(Income),
+                 y = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.),
+                 color = Region)) +
+  scale_color_viridis(discrete = TRUE, direction = -1, option = "F") +
+  labs(title = "Affordability of A Healthy Diet vs. Income (log scale)",
+       x = "Income",
+       y = "Affordability") + 
+  theme(legend.position = "right",
+        legend.key.size = unit(0.5, 'cm'),
+        legend.key.height = unit(0.5, 'cm'), 
+        legend.key.width = unit(0.5, 'cm'),
+        legend.title = element_text(size=10),
+        legend.text = element_text(size=8)) 
+``` 
+
+### b. Case Study
