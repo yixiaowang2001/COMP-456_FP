@@ -6,8 +6,9 @@ output:
   html_document:
     toc: true
     toc_float: true
-    df_print: paged
+    df_print: "paged"
     code_download: true
+    code_folding: "hide"
 ---
 
 ```{r setup, include=FALSE}
@@ -46,7 +47,7 @@ food_price_nutrition = food_price_nutrition %>%
 food_price_nutrition = food_price_nutrition %>% 
   mutate(Region = countrycode(sourcevar = food_price_nutrition$Country.Code, origin = "iso3c", destination = "un.region.name"))
 
-head(food_price_nutrition)
+food_price_nutrition
 ```
 
 ```{r}
@@ -59,7 +60,7 @@ income = income %>%
                                  ifelse(X2017 <= 13205, "Upper-middle-income", "High-income")))) %>% 
   rename("Income" = X2017)
 
-head(income)
+income
 ```
 
 ## 4. Results
@@ -68,7 +69,7 @@ head(income)
 
 #### i. Boxplot: The Cost of Different Types of Diets by Country Income Group
 
-```{r}
+```{r, fig.width=9}
 food_price_nutrition %>% 
   left_join(income, by = "Country.Code") %>% 
   filter(!is.na(Group)) %>% 
@@ -99,7 +100,7 @@ food_price_nutrition %>%
                    y = as.numeric(Value)),
                width = 0.4) +
   facet_wrap(~Group, ncol = 4) +
-  theme(legend.position = "bottom",
+  theme(legend.position = "top",
         axis.title.x = element_blank(),
         axis.text.x = element_blank()) +
   scale_fill_viridis(discrete = TRUE, direction = -1, option = "F") +
@@ -111,7 +112,7 @@ food_price_nutrition %>%
 #### ii. Map: Percentage of The Population Who Cannot Afford a Healthy Diet
 
 
-```{r}
+```{r, fig.width=9}
 world_map = map_data("world")
 
 food_price_nutrition %>% 
@@ -127,13 +128,7 @@ food_price_nutrition %>%
   geom_map(map = world_map,
            aes(map_id = Country,
                fill = Percentage)) +
-  expand_limits(x = world_map$long, y = world_map$lat) + 
-  theme(legend.position = "right",
-        legend.key.size = unit(0.5, 'cm'),
-        legend.key.height = unit(0.5, 'cm'), 
-        legend.key.width = unit(0.5, 'cm'),
-        legend.title = element_text(size=10),
-        legend.text = element_text(size=8)) +
+  expand_limits(x = world_map$long, y = world_map$lat) +
   labs(title = "Percentage of The Population Who Cannot Afford a Healthy Diet",
        x = "Longitude",
        y = "Latitude") +
@@ -142,7 +137,7 @@ food_price_nutrition %>%
 
 #### iii. Scatter Plot: Affordability of A Healthy Diet vs. Income
 
-```{r}
+```{r, fig.width=9}
 income_temp = income %>% 
   mutate(Region = countrycode(sourcevar = income$Country.Code, origin = "iso3c", destination = "un.regionsub.name")) %>% 
   filter(!is.na(Region)) %>% 
@@ -162,23 +157,17 @@ food_price_nutrition %>%
               stat = "smooth", 
               se = FALSE,
               color = 8,
-              size = 2.5) +
+              size = 1.5) +
   geom_point(aes(x = Income,
                  y = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.),
                  color = Region)) +
   scale_color_viridis(discrete = TRUE, direction = -1, option = "F") +
   labs(title = "Affordability of A Healthy Diet vs. Income",
        x = "Income",
-       y = "Affordability") + 
-  theme(legend.position = "right",
-        legend.key.size = unit(0.5, 'cm'),
-        legend.key.height = unit(0.5, 'cm'), 
-        legend.key.width = unit(0.5, 'cm'),
-        legend.title = element_text(size=10),
-        legend.text = element_text(size=8)) 
+       y = "Affordability")
 ```
 
-```{r}
+```{r, fig.width=9}
 food_price_nutrition %>% 
   filter(Time == 2017) %>% 
   filter(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp. != "..") %>% 
@@ -193,20 +182,14 @@ food_price_nutrition %>%
               stat = "smooth", 
               se = FALSE,
               color = 8,
-              size = 2.5) +
+              size = 1.5) +
   geom_point(aes(x = log(Income),
                  y = as.numeric(Affordability.of.a.healthy.diet..ratio.of.cost.to.food.expenditures..CoHD_fexp.),
                  color = Region)) +
   scale_color_viridis(discrete = TRUE, direction = -1, option = "F") +
   labs(title = "Affordability of A Healthy Diet vs. Income (log scale)",
        x = "Income",
-       y = "Affordability") + 
-  theme(legend.position = "right",
-        legend.key.size = unit(0.5, 'cm'),
-        legend.key.height = unit(0.5, 'cm'), 
-        legend.key.width = unit(0.5, 'cm'),
-        legend.title = element_text(size=10),
-        legend.text = element_text(size=8)) 
+       y = "Affordability") 
 ``` 
 
 ### b. Case Study
