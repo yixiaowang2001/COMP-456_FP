@@ -63,6 +63,16 @@ income = income %>%
 income
 ```
 
+```{r}
+gini = read.csv("data/gini.csv") %>% 
+  rename(Country = 'field.0.__text',
+         Value = 'field.2.__text') %>% 
+  select(Country, Value)
+
+gini %>% 
+  arrange(Value)
+```
+
 ## 4. Results
 
 ### a. Global Analysis
@@ -70,7 +80,7 @@ income
 #### i. Boxplot: The Cost of Different Types of Diets by Country Income Group
 
 ```{r, fig.width=9}
-food_price_nutrition %>% 
+p1 = food_price_nutrition %>% 
   left_join(income, by = "Country.Code") %>% 
   filter(!is.na(Group)) %>% 
   select(Country, 
@@ -88,7 +98,11 @@ food_price_nutrition %>%
                names_to = c("Category"),
                values_to = "Value") %>% 
   na.omit() %>% 
-  filter(Value != "..") %>% 
+  filter(Value != "..")
+
+p1$Group = factor(p1$Group, levels = c('Low-income', 'Lower-middle-income', 'Upper-middle-income', 'High-income'))
+
+p1 %>% 
   ggplot(aes(fill = Category)) +
   geom_boxplot(aes(x = Category,
                    y = as.numeric(Value)),
@@ -106,6 +120,8 @@ food_price_nutrition %>%
   scale_fill_viridis(discrete = TRUE, direction = -1, option = "F") +
   labs(title = "The Cost of Different Types of Diets by Country Income Group",
        y = "2017 USD")
+
+# ggsave("temp.jpg", width = 9, height = 5)
 ```
 
 
@@ -133,6 +149,8 @@ food_price_nutrition %>%
        x = "Longitude",
        y = "Latitude") +
   scale_fill_viridis(direction = -1, option = "F")
+
+# ggsave("temp.jpg", width = 9, height = 5)
 ```
 
 #### iii. Scatter Plot: Affordability of A Healthy Diet vs. Income
@@ -165,6 +183,8 @@ food_price_nutrition %>%
   labs(title = "Affordability of A Healthy Diet vs. Income",
        x = "Income",
        y = "Affordability")
+
+# ggsave("temp.jpg", width = 8, height = 7)
 ```
 
 ```{r, fig.width=9}
@@ -190,6 +210,129 @@ food_price_nutrition %>%
   labs(title = "Affordability of A Healthy Diet vs. Income (log scale)",
        x = "Income",
        y = "Affordability") 
+
+# ggsave("temp.jpg", width = 8, height = 7)
 ``` 
 
 ### b. Case Study
+
+Cost of an energy sufficient diet
+Cost of a healthy diet
+Cost of a nutrient adequate diet
+
+Lower-middle-income
+High-income
+Upper-middle-income
+Low-income
+
+```{r}
+p2 = p1 %>% 
+  filter(Group == "High-income",
+         Category == "Cost of an energy sufficient diet")
+
+boxplot(as.numeric(p2$Value))$out
+
+
+p1 %>% 
+  filter(Value == 2.958)
+
+income %>% 
+  filter(Country.Name == "Indonesia")
+```
+
+```{r}
+label = c("Milk", "Loaf of Fresh White Bread", "Rice", "Eggs", "Local Cheese", "Chicken Fillets", "Beef Round", "Apples", "Banana", "Oranges", "Tomato", "Potato", "Onion", "Lettuce")
+canada = c(0.63, 0.63, 0.29, 0.61, 1.16, 1.77, 1.95, 0.96, 0.31, 0.97, 0.69, 0.55, 0.25, 0.46)
+angola = c(0.62, 0.65, 0.15, 0.74, 0.55, 1.29, 2.49, 1.35, 0.19, 1.04, 0.67, 0.50, 0.22, 0.24)
+china = c(0.52, 0.55, 0.13, 0.38, 1.32, 0.59, 1.92, 0.61, 0.48, 0.61, 0.31, 0.18, 0.10, 0.18)
+indonesia = c(0.32, 0.29, 0.08, 0.34, 0.68, 0.52, 1.26, 0.89, 0.39, 0.63, 0.26, 0.28, 0.20, 0.22)
+Canada = data.frame(Group = label, Value = canada)
+Angola = data.frame(Group = label, Value = angola)
+China = data.frame(Group = label, Value = china)
+Indonesia = data.frame(Group = label, Value = indonesia)
+```
+
+```{r}
+Canada %>% 
+  ggplot(aes(x = "",
+             y = Value,
+             fill = Group)) +
+  geom_bar(stat = "identity",
+           width = 1,
+           color = "white") +
+  coord_polar("y", start = 0) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  scale_fill_viridis(discrete = TRUE, direction = -1, option = "F") +
+  labs(title = "Distribution of Cost of A Healthy Daily Diet in Canada") 
+
+# ggsave("temp.jpg", width = 6, height = 5)
+```
+
+```{r}
+Angola %>% 
+  ggplot(aes(x = "",
+             y = Value,
+             fill = Group)) +
+  geom_bar(stat = "identity",
+           width = 1,
+           color = "white") +
+  coord_polar("y", start = 0) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  scale_fill_viridis(discrete = TRUE, direction = -1, option = "F") +
+  labs(title = "Distribution of Cost of A Healthy Daily Diet in Angola") 
+
+# ggsave("temp.jpg", width = 6, height = 5)
+```
+
+```{r}
+China %>% 
+  ggplot(aes(x = "",
+             y = Value,
+             fill = Group)) +
+  geom_bar(stat = "identity",
+           width = 1,
+           color = "white") +
+  coord_polar("y", start = 0) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  scale_fill_viridis(discrete = TRUE, direction = -1, option = "F") +
+  labs(title = "Distribution of Cost of A Healthy Daily Diet in China") 
+
+# ggsave("temp.jpg", width = 6, height = 5)
+```
+
+```{r}
+Indonesia %>% 
+  ggplot(aes(x = "",
+             y = Value,
+             fill = Group)) +
+  geom_bar(stat = "identity",
+           width = 1,
+           color = "white") +
+  coord_polar("y", start = 0) +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.title.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()) +
+  scale_fill_viridis(discrete = TRUE, direction = -1, option = "F") +
+  labs(title = "Distribution of Cost of A Healthy Daily Diet in Indonesia") 
+
+# ggsave("temp.jpg", width = 6, height = 5)
+```
+
