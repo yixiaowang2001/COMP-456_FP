@@ -15,7 +15,7 @@ Orianna Wang, Liz Cao, and Eric Wang, in Group Six, study the topic of the cost 
 
 ### 1.2 Repo Structure
 
-Folders named "FP" show outcomes for different project phases. The [COMP-456_Final.html](https://github.com/yixiaowang2001/COMP-456_FP/blob/main/FP5/COMP-456_Final.html) shows the final narrative.
+Folders named `FP` show outcomes for different project phases. The [COMP-456_Final.html](https://github.com/yixiaowang2001/COMP-456_FP/blob/main/FP5/COMP-456_Final.html) shows the final narrative.
 
 ### 1.3 How to reproduce our work
 
@@ -23,5 +23,5 @@ Download the whole repo and run the Rmd file you want.
 
 ## 2. Dependencies
 
-+ Data: attached in the "data" folder for each project phase.
-+ Code: attached at the head of each Rmd file, inside every "library()" function.
++ Data: attached in the `data` folder for each project phase.
++ Code: attached at the head of each Rmd file, inside every `library()` function.
