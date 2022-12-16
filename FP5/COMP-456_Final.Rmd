@@ -379,7 +379,7 @@ For further studies, resolving some open questions in terms of the variation is 
 
 + Liz: brainstorming, literature reviews, data findings, final narrative 
 + Orianna: Researching to clear out structure and find resource papers. Perform case study analysis and help with data finding. Presentation slide.
-+ Eric: Data cleaning, data visualization, formatting PowerPoint and final narrative
++ Eric: Data cleaning, data visualization, formatting PowerPoint and final narrative, Github managing
 
 ### 7 Resources & References
 
