@@ -23,5 +23,5 @@ Download the whole repo and run the Rmd file you want.
 
 ## 2. Dependencies
 
-+ Data: attached [here]()
-+ Code:
++ Data: attached in the "data" folder for each project phase.
++ Code: 
