@@ -1,0 +1,26 @@
+Food Prices and Food Nutrition:
+
+https://databank.worldbank.org/source/food-prices-for-nutrition
+
+Choices chosen to get the data:
+Database: Food Prices for Nutirtion
+Country: All
+Classification: Food Prices for Nutrition Data
+Series: All
+Time: All
+
+---------------------------------------------
+
+Income:
+
+https://datatopics.worldbank.org/world-development-indicators/the-world-by-income-and-region.html
+
+Go down to the package and click "Get the data".
+
+---------------------------------------------
+
+Minimum Choices Per Day:
+
+https://www.numbeo.com/cost-of-living/
+
+Search for the city and eneter into R studio by hand.
