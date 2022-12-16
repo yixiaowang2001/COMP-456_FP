@@ -23,5 +23,5 @@ Download the whole repo and run the Rmd file you want.
 
 ## 2. Dependencies
 
-+ Data: attached in the `data` folder for each project phase.
-+ Code: attached at the head of each Rmd file, inside every `library()` function.
++ Data: To run the final narrative, [here](https://github.com/yixiaowang2001/COMP-456_FP/blob/main/datasets.txt) shows all the datasets used.
++ Code: To run the final narrative, [here](https://github.com/yixiaowang2001/COMP-456_FP/blob/main/packages.txt) shows all the packages used.
