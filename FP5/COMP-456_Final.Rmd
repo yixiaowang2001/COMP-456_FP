@@ -23,7 +23,6 @@ library(forcats)
 library(scales)
 library(viridis)
 library(factoextra)
-library(leaflet)
 library(ggthemes)  
 
 theme_set(theme_bw())

@@ -1,0 +1,8 @@
+tidyverse
+ggplot2
+countrycode
+forcats
+scales
+viridis
+factoextra
+ggthemes
